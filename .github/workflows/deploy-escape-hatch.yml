@@ -1,0 +1,87 @@
+name: Deploy escape-hatch app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/escape-hatch/**'
+      - '.github/workflows/deploy-escape-hatch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-escape-hatch
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MS_CLI_CLOUD_INSTANCE: test
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Validate external-artifact configuration
+        working-directory: apps/escape-hatch
+        run: |
+          node --input-type=module -e "
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const config = JSON.parse(fs.readFileSync('ms.config.json', 'utf8'));
+          assert.equal(config.repoType, 'none');
+          assert.equal(config.appId, 'e669fbad-d150-4290-9268-aef2c6784f56');
+          assert.equal(config.environmentId, 'default-91bee3d9-0c15-4f17-8624-c92bb8b36ead');
+          "
+
+      - name: Install app dependencies
+        working-directory: apps/escape-hatch
+        run: npm install
+
+      - name: Install ms CLI
+        id: cli
+        uses: microsoft/Managed-Apps/github-actions/install-ms-cli@e5e03602ca77ea8a6fa55731ae356b3ea5128a26 # v1
+
+      - name: Pack app
+        uses: microsoft/Managed-Apps/github-actions/ms-app-pack@e5e03602ca77ea8a6fa55731ae356b3ea5128a26 # v1
+        with:
+          working-directory: apps/escape-hatch
+          app-id: ${{ secrets.PP_SP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_SP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_SP_TENANT_ID }}
+
+      - name: Deploy app
+        id: deploy
+        uses: microsoft/Managed-Apps/github-actions/ms-app-deploy@e5e03602ca77ea8a6fa55731ae356b3ea5128a26 # v1
+        with:
+          working-directory: apps/escape-hatch
+          cloud: test
+          app-id: ${{ secrets.PP_SP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_SP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_SP_TENANT_ID }}
+
+      - name: Record deployment
+        env:
+          CLI_VERSION: ${{ steps.cli.outputs.cli-version }}
+          APP_ID: ${{ steps.deploy.outputs.app-id }}
+          ENVIRONMENT_ID: ${{ steps.deploy.outputs.environment-id }}
+          APP_PLAY_URI: ${{ steps.deploy.outputs.app-play-uri }}
+        run: |
+          test "$APP_ID" = "e669fbad-d150-4290-9268-aef2c6784f56"
+          test "$ENVIRONMENT_ID" = "default-91bee3d9-0c15-4f17-8624-c92bb8b36ead"
+          test -n "$APP_PLAY_URI"
+          {
+            echo "## Escape-hatch deployment"
+            printf -- '- CLI: `%s`\n' "$CLI_VERSION"
+            printf -- '- App: `%s`\n' "$APP_ID"
+            printf -- '- Environment: `%s`\n' "$ENVIRONMENT_ID"
+            printf -- '- Commit: `%s`\n' "$GITHUB_SHA"
+            printf -- '- [Open app](%s)\n' "$APP_PLAY_URI"
+          } >> "$GITHUB_STEP_SUMMARY"

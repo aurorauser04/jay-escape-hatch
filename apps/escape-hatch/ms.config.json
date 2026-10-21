@@ -1,0 +1,11 @@
+{
+  "appId": "e669fbad-d150-4290-9268-aef2c6784f56",
+  "appDisplayName": "Jay Escape Hatch E2E 20261020",
+  "environmentId": "default-91bee3d9-0c15-4f17-8624-c92bb8b36ead",
+  "repoType": "none",
+  "cloud": "test",
+  "buildPath": "./dist",
+  "buildCommand": "npm run build",
+  "buildEntryPoint": "index.html",
+  "version": "0.0"
+}
