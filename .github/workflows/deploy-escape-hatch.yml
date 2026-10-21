@@ -67,6 +67,16 @@ jobs:
           client-secret: ${{ secrets.PP_SP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_SP_TENANT_ID }}
 
+      - name: Preserve packed app for verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: escape-hatch-packed-app
+          path: apps/escape-hatch/.ms/packed/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Record deployment
         env:
           CLI_VERSION: ${{ steps.cli.outputs.cli-version }}

@@ -14,3 +14,4 @@ Required repository secrets: `PP_SP_CLIENT_ID`, `PP_SP_CLIENT_SECRET`, and
 See the [deployment guide](https://learn.microsoft.com/en-us/microsoft-365/managed-apps/developer/deploy-managed-apps-github-actions)
 for setup and prerequisites. Successful runs publish the app URL and CLI version
 in their GitHub Actions summary.
+The packed sample is retained as a workflow artifact for one day for inspection.
